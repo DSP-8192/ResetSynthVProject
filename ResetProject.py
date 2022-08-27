@@ -85,8 +85,8 @@ for trackIndex in range(0, len(svProject["tracks"])):
 	svProject["tracks"][trackIndex]["mainGroup"] = noteGroup
 
 
-outFile = open(projectDir, "w", encoding="utf8")
+outFile = open(projectDir[0:len(projectDir)-4]+"_reset.svp", "w", encoding="utf8")
 json.dump(svProject, outFile)
 outFile.close()
-print("完成")
+print("完成，已保存为"+projectDir[0:len(projectDir)-4]+"_reset.svp")
 os.system("pause")
