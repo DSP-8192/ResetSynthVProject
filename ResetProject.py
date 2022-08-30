@@ -1,5 +1,6 @@
 import json
-import os
+from tkinter import Tk, Button, messagebox, filedialog
+import ctypes
 
 
 
@@ -54,39 +55,57 @@ def restoreGroupDefaults(group):
 
 
 
+#重置工程
+def resetProject(projectDir):
+	#打开工程
+	inFile = open(projectDir, "r", encoding="utf8")
+	svProject = json.loads(inFile.read().rstrip("\x00"))
+	inFile.close()
 
-#文件路径
-print("清理SV工程中的所有参数和音符属性")
-projectDir = input("请输入完整的工程路径（不要包括引号）：")
+	#遍历音符组库中的每个音符组
+	for libIndex in range(0, len(svProject["library"])):
+		#还原默认
+		noteGroup = svProject["library"][libIndex]
+		noteGroup = restoreGroupDefaults(noteGroup)
+		svProject["library"][libIndex] = noteGroup
 
+	#遍历每个轨道中的主音符组
+	for trackIndex in range(0, len(svProject["tracks"])):
+		#如果是伴奏轨，不改动
+		if(svProject["tracks"][trackIndex]["mainRef"]["isInstrumental"]):
+			continue
+		#还原默认
+		noteGroup = svProject["tracks"][trackIndex]["mainGroup"]
+		noteGroup = restoreGroupDefaults(noteGroup)
+		svProject["tracks"][trackIndex]["mainGroup"] = noteGroup
 
-#打开工程
-inFile = open(projectDir, "r", encoding="utf8")
-svProject = json.loads(inFile.read().rstrip("\x00"))
-inFile.close()
-
-
-#遍历音符组库中的每个音符组
-for libIndex in range(0, len(svProject["library"])):
-	#还原默认
-	noteGroup = svProject["library"][libIndex]
-	noteGroup = restoreGroupDefaults(noteGroup)
-	svProject["library"][libIndex] = noteGroup
-
-
-#遍历每个轨道中的主音符组
-for trackIndex in range(0, len(svProject["tracks"])):
-	#如果是伴奏轨，不改动
-	if(svProject["tracks"][trackIndex]["mainRef"]["isInstrumental"]):
-		continue
-	#还原默认
-	noteGroup = svProject["tracks"][trackIndex]["mainGroup"]
-	noteGroup = restoreGroupDefaults(noteGroup)
-	svProject["tracks"][trackIndex]["mainGroup"] = noteGroup
+	outFile = open(projectDir[0:len(projectDir)-4]+"_reset.svp", "w", encoding="utf8")
+	json.dump(svProject, outFile)
+	outFile.close()
 
 
-outFile = open(projectDir[0:len(projectDir)-4]+"_reset.svp", "w", encoding="utf8")
-json.dump(svProject, outFile)
-outFile.close()
-print("完成，已保存为"+projectDir[0:len(projectDir)-4]+"_reset.svp")
-os.system("pause")
+
+#按钮按下时
+def onButtonClick():
+	fileDir = filedialog.askopenfilename(title="选择工程文件",
+										filetypes=(("Synthesizer V R2工程文件", "*.svp*"),))
+	resetProject(fileDir)
+	messagebox.showinfo("处理完成", "已重置工程为"+fileDir[0:len(fileDir)-4]+"_reset.svp")
+
+	
+
+
+#GUI
+mainWindow = Tk()
+mainWindow.geometry("240x160")
+mainWindow.title("一键重置SV工程")
+
+ctypes.windll.shcore.SetProcessDpiAwareness(1)
+ScaleFactor=ctypes.windll.shcore.GetScaleFactorForDevice(0)
+mainWindow.tk.call('tk', 'scaling', ScaleFactor/75)
+
+loadProjectButton = Button(mainWindow, text="选择工程文件", command=onButtonClick,
+							height=1, width=10)
+loadProjectButton.place(x=70, y=60)
+
+mainWindow.mainloop()

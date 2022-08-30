@@ -1,1 +1,1 @@
-pyinstaller.exe .\ResetProject.py --onefile
+pyinstaller.exe .\ResetProject.py --onefile --windowed
