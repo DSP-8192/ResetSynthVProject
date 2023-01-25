@@ -1,1 +1,1 @@
-pyinstaller.exe .\ResetProject.py --onefile --windowed
+CALL nuitka --mingw --disable-console --enable-plugin=tk-inter --standalone --onefile --output-dir="./" "./ResetProject.py"
