@@ -4,7 +4,7 @@ import ctypes
 
 
 
-#参数名称
+#手绘参数名称
 parameterNames = ["pitchDelta", "vibratoEnv", "loudness", "tension", "breathiness",
 				"voicing", "gender", "toneShift"]
 
@@ -13,16 +13,16 @@ parameterNames = ["pitchDelta", "vibratoEnv", "loudness", "tension", "breathines
 
 #还原音符组默认设置
 def restoreGroupDefaults(group):	
-	#遍历所有参数
+	#遍历所有手绘参数
 	for paraName in parameterNames:
-		#清空参数
+		#清空参数点
 		group["parameters"][paraName]["points"] = []
 	
 	#遍历所有音符
 	for noteIndex in range(0, len(group["notes"])):
 		#读取
 		note = group["notes"][noteIndex]
-		#恢复默认
+		#清除音符属性
 		note["phonemes"] = ""
 		note["detune"] = 0
 		note["attributes"] = {}
@@ -47,11 +47,26 @@ def restoreGroupDefaults(group):
 				}
 			]
 		}
-		#写入
-		group["notes"][noteIndex] = note
-	
-	#返回
-	return group
+
+
+
+#还原轨道默认设置
+def restoreTrackDefaults(track):
+	#清空主音轨参数
+	restoreGroupDefaults(track["mainGroup"])
+	#重置主音轨全局参数
+	track["mainRef"]["voice"] = {
+        "vocalModeInherited": True,
+       	"vocalModePreset": "",
+       	"vocalModeParams": {}
+    }
+	#重置音符组全局参数
+	for groupIndex in range(0, len(track["groups"])):
+		track["groups"][groupIndex]["voice"] = {
+			"vocalModeInherited": True,
+			"vocalModePreset": "",
+			"vocalModeParams": {}
+		}
 
 
 
@@ -64,33 +79,41 @@ def resetProject(projectDir):
 
 	#遍历音符组库中的每个音符组
 	for libIndex in range(0, len(svProject["library"])):
-		#还原默认
-		noteGroup = svProject["library"][libIndex]
-		noteGroup = restoreGroupDefaults(noteGroup)
-		svProject["library"][libIndex] = noteGroup
+		#重置音符组参数
+		restoreGroupDefaults(svProject["library"][libIndex])
 
-	#遍历每个轨道中的主音符组
+	#遍历每个轨道
 	for trackIndex in range(0, len(svProject["tracks"])):
 		#如果是伴奏轨，不改动
 		if(svProject["tracks"][trackIndex]["mainRef"]["isInstrumental"]):
 			continue
-		#还原默认
-		noteGroup = svProject["tracks"][trackIndex]["mainGroup"]
-		noteGroup = restoreGroupDefaults(noteGroup)
-		svProject["tracks"][trackIndex]["mainGroup"] = noteGroup
+		#重置轨道参数
+		restoreTrackDefaults(svProject["tracks"][trackIndex])
 
-	outFile = open(projectDir[0:len(projectDir)-4]+"_reset.svp", "w", encoding="utf8")
-	json.dump(svProject, outFile)
-	outFile.close()
+	return svProject
 
 
 
 #按钮按下时
 def onButtonClick():
-	fileDir = filedialog.askopenfilename(title="选择工程文件",
+	#选择读取工程路径
+	inFileDir = filedialog.askopenfilename(title="选择读取的工程文件",
 										filetypes=(("Synthesizer V R2工程文件", "*.svp*"),))
-	resetProject(fileDir)
-	messagebox.showinfo("处理完成", "已重置工程为"+fileDir[0:len(fileDir)-4]+"_reset.svp")
+	#重置SV工程
+	svProjectReset = resetProject(inFileDir)
+	#选择保存工程路径
+	outFileDir = filedialog.asksaveasfilename(title="选择工程保存路径",
+										filetypes=(("Synthesizer V R2工程文件", "*.svp*"),))
+	#保存
+	if (outFileDir != ""):
+		#检查文件路径
+		if not outFileDir.endswith(".svp"):
+			outFileDir += ".svp"
+		#写入
+		outFile = open(outFileDir, "w", encoding="utf8")
+		json.dump(svProjectReset, outFile)
+		outFile.close()
+		messagebox.showinfo("处理完成", "已保存重置的工程到" + outFileDir)
 
 	
 
